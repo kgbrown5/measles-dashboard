@@ -14,7 +14,10 @@ const WORLD_ATLAS_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-11
 // sidebar consume expects 6 per-grade values per school.
 const GRADE_KEYS = ['K', '1', '2', '3', '4', '5'];
 
+const NC_REMOTE = 'https://cgbryan1.github.io/measles-NC/';
+
 function withBase(path) {
+  if (path.startsWith('data/states/nc')) return `${NC_REMOTE}${path}`;
   const base = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.BASE_URL) || '/';
   return `${base}${path}`;
 }
