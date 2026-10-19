@@ -18,7 +18,7 @@ const stateRegistry = await registryResponse.json();
 export const STATES = Object.fromEntries(
   await Promise.all(
     Object.entries(stateRegistry).map(async ([stateCode, baseUrl]) => {
-      const response = await fetch(`${baseUrl}meta.json`);
+      const response = await fetch(`${baseUrl}data/meta.json`);
       if (!response.ok) {
         throw new Error(
           `Unable to load metadata for ${stateCode} (${response.status})`,

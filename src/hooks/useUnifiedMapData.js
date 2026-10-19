@@ -307,8 +307,8 @@ export function useUnifiedMapData() {
         // file. (Per-county files under counties/ are the canonical download/API
         // unit (#21/#22); the app reads schools.csv to avoid an N+1 fan-out.)
         const [countyRes, schoolRes] = await Promise.all([
-          fetch(`${stateRegistry[code]}data/states/${code}.csv`),
-          fetch(`${stateRegistry[code]}data/states/${code}/schools.csv`),
+          fetch(`${stateRegistry[code]}data/counties.csv`),
+          fetch(`${stateRegistry[code]}data/schools.csv`),
         ]);
         if (!countyRes.ok) throw new Error(`Failed to load ${code.toUpperCase()} data`);
         const countyRows = csvParse(await countyRes.text());
