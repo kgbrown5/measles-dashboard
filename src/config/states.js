@@ -3,33 +3,31 @@
 // The dashboard renders one US state at a time. The choice of state is
 // driven by a state code (lowercase, e.g. "nc"). All state-specific values
 // — display name, data folder, county FIPS prefix, and external attribution
-// links — live here so adding a new state requires data + an entry below,
-// not code changes elsewhere.
-export const STATES = {
-  nc: {
-    code: 'nc',
-    name: 'NC',
-    fullName: 'North Carolina',
-    // Folder under public/ where dashboard.json + school_coords.json live.
-    dataDir: 'NC',
-    // 2-digit state FIPS — used to filter the national counties topology
-    // down to just this state's counties.
-    fips: '37',
-    // Attribution link shown in the map legend / footer for this state's
-    // public health data source.
-    sourceUrl: 'https://www.dph.ncdhhs.gov/programs/epidemiology/immunization/data/kindergarten-dashboard',
-    sourceLabel: 'NC DHHS',
-  },
-  ca: {
-    code: 'ca',
-    name: 'CA',
-    fullName: 'California',
-    dataDir: 'CA',
-    fips: '06',
-    sourceUrl: 'https://www.cdph.ca.gov/Programs/CID/DCDC/Pages/Immunization/School/2023-2024-Kindergarten-Data.aspx',
-    sourceLabel: 'CA CDPH',
-  },
-};
+// links — live in the state specific repository at meta.json.
+
+// Load state metadata from each state's deployment. Top-level await ensures
+// consumers see a complete registry when this module is imported.
+const base =
+  (typeof import.meta !== "undefined" &&
+    import.meta.env &&
+    import.meta.env.BASE_URL) ||
+  "/";
+const registryResponse = await fetch(`${base}data/stateRegistry.json`);
+const stateRegistry = await registryResponse.json();
+
+export const STATES = Object.fromEntries(
+  await Promise.all(
+    Object.entries(stateRegistry).map(async ([stateCode, baseUrl]) => {
+      const response = await fetch(`${baseUrl}meta.json`);
+      if (!response.ok) {
+        throw new Error(
+          `Unable to load metadata for ${stateCode} (${response.status})`,
+        );
+      }
+      return [stateCode, await response.json()];
+    }),
+  ),
+);
 
 export const DEFAULT_STATE_CODE = 'nc';
 

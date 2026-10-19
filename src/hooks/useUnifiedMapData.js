@@ -19,6 +19,10 @@ function withBase(path) {
   return `${base}${path}`;
 }
 
+// TODO: Notes
+const registryResponse = await fetch(withBase(`data/stateRegistry.json`));
+const stateRegistry = await registryResponse.json();
+
 // Coverage in the CSVs is a proportion in [0,1]; the existing UI works in
 // percent (covTier(95), `coverage < 95`, `.toFixed(1)+'%'`). Convert on load.
 function toPct(v) {
@@ -303,8 +307,8 @@ export function useUnifiedMapData() {
         // file. (Per-county files under counties/ are the canonical download/API
         // unit (#21/#22); the app reads schools.csv to avoid an N+1 fan-out.)
         const [countyRes, schoolRes] = await Promise.all([
-          fetch(withBase(`data/states/${code}.csv`)),
-          fetch(withBase(`data/states/${code}/schools.csv`)),
+          fetch(`${stateRegistry[code]}data/states/${code}.csv`),
+          fetch(`${stateRegistry[code]}data/states/${code}/schools.csv`),
         ]);
         if (!countyRes.ok) throw new Error(`Failed to load ${code.toUpperCase()} data`);
         const countyRows = csvParse(await countyRes.text());
