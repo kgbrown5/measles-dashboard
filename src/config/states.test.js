@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   STATES,
+  loadStateRegistry,
   DEFAULT_STATE_CODE,
   getStateConfig,
   FIPS_TO_USPS,
@@ -8,6 +9,46 @@ import {
   uspsToFips,
   normalizeFips,
 } from './states.js';
+
+describe('remote state metadata', () => {
+  const bundledNc = STATES.nc;
+  const remoteBase = 'https://example.test/nc/';
+
+  afterEach(() => {
+    STATES.nc = bundledNc;
+    vi.unstubAllGlobals();
+  });
+
+  it.each(['404', 'network failure', 'invalid JSON'])('keeps bundled metadata after %s', async (failure) => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ nc: remoteBase }) });
+    if (failure === '404') fetchMock.mockResolvedValueOnce({ ok: false });
+    if (failure === 'network failure') fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    if (failure === 'invalid JSON') fetchMock.mockResolvedValueOnce({
+      ok: true, json: async () => { throw new SyntaxError('Invalid JSON'); },
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await loadStateRegistry()).toEqual({});
+    expect(getStateConfig('nc')).toBe(bundledNc);
+    expect(getStateConfig('ca').fips).toBe('06');
+  });
+
+  it('keeps remote sources working when metadata is available', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ nc: remoteBase }) })
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ...bundledNc, sourceLabel: 'Remote source' }) }));
+
+    expect(await loadStateRegistry()).toEqual({ nc: remoteBase });
+    expect(getStateConfig('nc').sourceLabel).toBe('Remote source');
+  });
+
+  it('keeps bundled states available when the registry cannot load', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+    expect(await loadStateRegistry()).toEqual({});
+    expect(getStateConfig('nc')).toBe(bundledNc);
+  });
+});
 
 describe('STATES registry', () => {
   it('includes NC by default', () => {

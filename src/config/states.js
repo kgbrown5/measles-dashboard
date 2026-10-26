@@ -1,33 +1,63 @@
-// State metadata used to drive the state-parameterized view.
-//
-// The dashboard renders one US state at a time. The choice of state is
-// driven by a state code (lowercase, e.g. "nc"). All state-specific values
-// — display name, data folder, county FIPS prefix, and external attribution
-// links — live in the state specific repository at meta.json.
+// Bundled metadata keeps startup independent of state deployments. Remote
+// metadata can extend these defaults when the map data hook loads the registry.
+export const STATES = {
+  nc: {
+    code: 'nc',
+    name: 'NC',
+    fullName: 'North Carolina',
+    // Folder under public/ where dashboard.json + school_coords.json live.
+    dataDir: 'NC',
+    // 2-digit state FIPS — used to filter the national counties topology
+    // down to just this state's counties.
+    fips: '37',
+    // Attribution link shown in the map legend / footer for this state's
+    // public health data source.
+    sourceUrl: 'https://www.dph.ncdhhs.gov/programs/epidemiology/immunization/data/kindergarten-dashboard',
+    sourceLabel: 'NC DHHS',
+  },
+  ca: {
+    code: 'ca',
+    name: 'CA',
+    fullName: 'California',
+    dataDir: 'CA',
+    fips: '06',
+    sourceUrl: 'https://www.cdph.ca.gov/Programs/CID/DCDC/Pages/Immunization/School/2023-2024-Kindergarten-Data.aspx',
+    sourceLabel: 'CA CDPH',
+  },
+};
 
-// Load state metadata from each state's deployment. Top-level await ensures
-// consumers see a complete registry when this module is imported.
-const base =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    import.meta.env.BASE_URL) ||
-  "/";
-const registryResponse = await fetch(`${base}data/stateRegistry.json`);
-const stateRegistry = await registryResponse.json();
-
-export const STATES = Object.fromEntries(
-  await Promise.all(
-    Object.entries(stateRegistry).map(async ([stateCode, baseUrl]) => {
-      const response = await fetch(`${baseUrl}meta.json`);
-      if (!response.ok) {
-        throw new Error(
-          `Unable to load metadata for ${stateCode} (${response.status})`,
-        );
+// Called during the map loading lifecycle, never during module import. A
+// missing deployment falls back to the bundled metadata and CSVs. Return only
+// usable remote sources so an unavailable metadata endpoint cannot strand a
+// state on a broken remote URL.
+export async function loadStateRegistry() {
+  const base = import.meta.env.BASE_URL || '/';
+  try {
+    const response = await fetch(`${base}data/stateRegistry.json`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return {};
+    const registry = await response.json();
+    const entries = await Promise.all(Object.entries(registry).map(async ([code, baseUrl]) => {
+      try {
+        const response = await fetch(`${baseUrl}meta.json`, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!response.ok) return null;
+        const metadata = await response.json();
+        const config = { ...STATES[code], ...metadata };
+        if (config.code !== code || !/^\d{2}$/.test(config.fips) || !config.name) return null;
+        STATES[code] = config;
+        return [code, baseUrl];
+      } catch {
+        return null;
       }
-      return [stateCode, await response.json()];
-    }),
-  ),
-);
+    }));
+    return Object.fromEntries(entries.filter(Boolean));
+  } catch {
+    return {};
+  }
+}
 
 export const DEFAULT_STATE_CODE = 'nc';
 

@@ -145,6 +145,25 @@ describe('useUnifiedMapData', () => {
     globalThis.fetch = originalFetch;
   });
 
+  it('loads the map and local state CSVs when remote metadata returns 404', async () => {
+    const localFetch = globalThis.fetch;
+    globalThis.fetch = vi.fn(url => {
+      if (url.endsWith('data/stateRegistry.json')) {
+        return Promise.resolve({ ok: true, json: async () => ({ nc: 'https://example.test/nc/' }) });
+      }
+      return localFetch(url);
+    });
+    const { result } = renderHook(() => useUnifiedMapData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBeNull();
+
+    await act(async () => { await result.current.focusState('nc'); });
+    expect(result.current.stateData.nc.allSchools).toHaveLength(3);
+    expect(captured).toContain('/data/states/nc.csv');
+    expect(captured).toContain('/data/states/nc/schools.csv');
+    expect(captured).not.toContain('https://example.test/nc/data/states/nc.csv');
+  });
+
   it('loads shared topology + manifest on mount', async () => {
     const { result } = renderHook(() => useUnifiedMapData());
     await waitFor(() => expect(result.current.loading).toBe(false));

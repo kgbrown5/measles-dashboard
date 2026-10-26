@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/build-schema-json.mjs && node scripts/gen-api-page.mjs",
+    "predev": "npm run prebuild",
     "dev": "vite",
     "derive-county-csvs": "node scripts/derive-county-csvs.mjs",
     "build-all-schools": "node scripts/build-all-schools.mjs",
