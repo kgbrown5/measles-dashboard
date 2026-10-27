@@ -11,9 +11,6 @@ The focus is the work in the dashboard since commit
 - Map download links provide national-, state-, and county-level CSVs.
 - The data producers use a consistent schema and shared R helpers.
 
-The professor is the tester and acceptance approver. Complete these tests by
-December 31, 2026. Record the date and the commit SHA for each repository.
-
 **Known issue to decide:** the map loads NC data from the NC repository, but
 the download links point to CSV files published by the dashboard. The live
 downloads work, but the local dashboard checkout does not contain those files.
@@ -128,12 +125,9 @@ This only confirms the live sample files, not a local build or all counties.
 **Pass:** the NC map and data load within 15 seconds each time (the existing
 browser tests use a 15-second map-render timeout), values match the CSV, and
 blank data is not shown as zero. Record any transient failure and whether a
-reload recovers. This is a small reliability check, not a high-traffic load
-test.
+reload recovers. 
 
 ## 4. Acceptance tests
-
-The professor completes this checklist by December 31, 2026:
 
 - [ ] Unit tests pass: `npm test`.
 - [ ] Lint and build pass: `npm run lint` and `npm run build`.
