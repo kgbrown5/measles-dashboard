@@ -1,6 +1,11 @@
 # Test Plan
 
-## What this plan tests
+## Part 1: Future improvements
+
+Ultimately, we'd like to test our newly created measles-AA with a completely fresh dataset, rather than against the NC and CA repos it was based on. This requires extensive specialized research and an understanding of reasonable vaccine statistic ranges, so this was unrealistic for our time frame.
+
+
+## Part 2: What this plan tests
 
 The focus is the work in the dashboard since commit
 `81ac83f2e7ffecf54c2f6fd73610e15d759ed139`, plus related work in
