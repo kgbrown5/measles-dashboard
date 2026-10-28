@@ -1,7 +1,6 @@
 #!/usr/bin/env node
-// Generate public/data/schema.json from the single-source schema definition
-// (src/data/schema.js), so the published, machine-readable schema cannot drift
-// from the contract test or the docs (#77).
+// Generate public/data/schema.json from the documented CSV shapes in
+// src/data/schema.js so the machine-readable schema stays aligned with the docs.
 //
 // Consumers fetch schema.json and build a typed reader from it (e.g. an Arrow
 // schema), then read the CSV with guaranteed types instead of inference. See

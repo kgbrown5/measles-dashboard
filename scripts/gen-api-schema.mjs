@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Regenerate the schema tables in docs/API.md from the single-source schema
-// definition (src/data/schema.js), so the docs cannot drift from the data (#77).
+// Regenerate the schema tables in docs/API.md from the documented CSV shapes
+// in src/data/schema.js, so the docs cannot drift from the schema reference.
 //
 // The column tables live between sentinel comments in API.md; this script
 // rewrites the content between them. A sync test (csvSchema.test.js) calls

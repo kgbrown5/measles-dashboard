@@ -1,12 +1,9 @@
-// Single source of truth for the published dataset schema (#77).
+// Documentation for the CSV shapes consumed by the dashboard (#77).
 //
-// The CSV contract test (csvSchema.test.js), the generated machine-readable
-// schema (public/data/schema.json), and the API.md column tables all derive
-// from this one definition, so they cannot drift from each other. The R
-// producers (build_state.R / build_nc_from_estimates.R) are the *ultimate*
-// source of truth for what the CSVs contain; the contract test validates the
-// real CSVs against this definition, so a producer change that diverges fails
-// CI until this file is updated to match.
+// The generated machine-readable schema (public/data/schema.json) and the
+// API.md column tables derive from this definition. It documents the format
+// expected by the UI and describes CSVs assembled for downloads; it does not
+// validate data fetched from state APIs.
 //
 // Types are a small language-agnostic vocabulary so the JSON is easy to map
 // into any reader:
@@ -14,19 +11,15 @@
 //   "integer" -> e.g. Arrow int64
 //   "number"  -> e.g. Arrow float64 (coverage values are proportions in [0, 1])
 //
-// Columns may carry an optional `constraints` object, validated per-row by the
-// conformance check (validate.js / csvSchema.test.js) so a contributed state's
-// CSVs (#78/#82) can't merge with out-of-range or malformed values. The
-// vocabulary is deliberately tiny and JSON-serializable so it travels in
-// schema.json for external readers:
+// Columns may carry an optional `constraints` object to document expected
+// value ranges or enumerations for consumers of schema.json. These are
+// descriptive metadata; the dashboard does not apply them to API responses.
+// The vocabulary is deliberately tiny and JSON-serializable:
 //   { min, max }  inclusive numeric bounds
 //   { enum: [...] } the value (compared as a string) must be one of these
 //   { pattern }   a regex (string) the value must match
-// Constraints apply ONLY to non-empty cells: a blank cell is always allowed,
-// because the data legitimately uses blanks for "not available" (NC's per-grade
-// and credible-interval columns, county_fips, and lon/lat/coverage/tier for
-// schools with a location but no model estimate). See the API.md completeness
-// note.
+// Blank cells represent values unavailable from the source data; see the
+// API.md completeness note for documented conventions.
 
 const GRADES = ['K', '1', '2', '3', '4', '5'];
 
@@ -99,9 +92,10 @@ export function columnNames(file) {
   return FILES[file].columns.map((c) => c.name);
 }
 
-// The object serialized to public/data/schema.json.
+// The object serialized to public/data/schema.json. It documents CSVs fetched
+// from state APIs and the on-demand CSV shapes assembled by the browser.
 export const SCHEMA = {
-  description: 'Column schema for the measles-dashboard static dataset API. '
+  description: 'Column schema for CSV data fetched from registered state APIs and assembled by the dashboard. '
     + 'Coverage values are proportions in [0, 1]. Types: string, integer, number. '
     + 'Generated from src/data/schema.js by scripts/build-schema-json.mjs; do not edit by hand.',
   files: FILES,
