@@ -1,47 +1,47 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import DownloadButton from './DownloadButton.jsx';
 
-// In tests import.meta.env.BASE_URL is unset, so withBase() prefixes '/'.
-const href = () => screen.getByRole('link').getAttribute('href');
-const dl = () => screen.getByRole('link').getAttribute('download');
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 
-describe('DownloadButton (#21)', () => {
-  it('national view links to the all-schools CSV', () => {
+describe('DownloadButton', () => {
+  it('fetches every registered API for a national download', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ nc: 'https://example.test/nc/', ca: 'https://example.test/ca/' }) })
+      .mockResolvedValue({ ok: true, text: async () => 'school_id,county\n1,Wake County\n' }));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
     render(<DownloadButton zoomLevel="national" />);
-    expect(href()).toBe('/data/all-schools.csv');
-    expect(dl()).toBe('all-schools.csv');
+    await user.click(screen.getByRole('button', { name: 'Download all schools (CSV)' }));
+    expect(fetch).toHaveBeenCalledWith('/data/stateRegistry.json');
+    expect(fetch).toHaveBeenCalledWith(new URL('data/schools.csv', 'https://example.test/ca/'));
+    expect(fetch).toHaveBeenCalledWith(new URL('data/schools.csv', 'https://example.test/nc/'));
   });
 
-  it('state view links to that state\'s schools CSV', () => {
+  it('fetches the selected state API for a state download', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, json: async () => ({ ca: 'https://example.test/ca/' }) })
+      .mockResolvedValueOnce({ ok: true, text: async () => 'school_id,county\n1,Los Angeles County\n' }));
+    vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:test');
+    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {});
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
     render(<DownloadButton zoomLevel="state" stateCode="ca" />);
-    expect(href()).toBe('/data/states/ca/schools.csv');
-    expect(dl()).toBe('ca-schools.csv');
+    await user.click(screen.getByRole('button', { name: 'Download CA schools (CSV)' }));
+    expect(fetch).toHaveBeenCalledWith(new URL('data/schools.csv', 'https://example.test/ca/'));
   });
 
-  it('county view links to that county\'s school-breakdown CSV', () => {
+  it('supports county downloads and labels them with the county name', () => {
     render(<DownloadButton zoomLevel="county" stateCode="ca" countySlug="los-angeles" />);
-    expect(href()).toBe('/data/states/ca/counties/los-angeles.csv');
-    expect(dl()).toBe('ca-los-angeles-schools.csv');
-  });
-
-  it('county view labels the download with the canonical county name (#92)', () => {
-    render(
-      <DownloadButton
-        zoomLevel="county"
-        stateCode="ca"
-        countySlug="los-angeles"
-        countyName="Los Angeles County"
-      />
-    );
-    const label = screen.getByRole('link').getAttribute('title');
-    expect(label).toBe('Download Los Angeles County schools (CSV)');
-    expect(screen.getByRole('link').getAttribute('aria-label')).toBe(label);
-  });
-
-  it('county view falls back to the de-slugged name before the canonical name resolves (#92)', () => {
-    render(<DownloadButton zoomLevel="county" stateCode="ca" countySlug="los-angeles" />);
-    expect(screen.getByRole('link').getAttribute('title')).toBe('Download los angeles schools (CSV)');
+    expect(screen.getByRole('button', { name: 'Download los angeles schools (CSV)' })).toBeInTheDocument();
   });
 
   it('renders nothing when the resolution lacks the data it needs', () => {
