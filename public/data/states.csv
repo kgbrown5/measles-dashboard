@@ -1,3 +1,0 @@
-state,state_fips,state_name,n_schools,pct_schools_below_95,coverage,coverage_ci_low,coverage_ci_high,coverage_K,coverage_1,coverage_2,coverage_3,coverage_4,coverage_5,coverage_ci_low_K,coverage_ci_low_1,coverage_ci_low_2,coverage_ci_low_3,coverage_ci_low_4,coverage_ci_low_5,coverage_ci_high_K,coverage_ci_high_1,coverage_ci_high_2,coverage_ci_high_3,coverage_ci_high_4,coverage_ci_high_5,prob_below_95,tier
-ca,6,California,7877,0.1743,0.9788,0.9785,0.9791,0.9558,0.9798,0.9837,0.9851,0.9849,0.9835,0.9554,0.9795,0.9834,0.9848,0.9846,0.9832,0.9563,0.9802,0.9841,0.9854,0.9852,0.9839,0,H
-nc,37,North Carolina,1825,0.3951,0.9469,,,0.9459,0.9427,0.9372,0.94,0.9581,0.9621,,,,,,,,,,,,,,M

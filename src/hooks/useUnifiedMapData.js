@@ -83,7 +83,7 @@ function buildTopology({ stateCode, us }) {
 function buildStateSummaries(text) {
   const out = {};
   if (!text) return out;
-  csvParse(text).forEach(r => {
+  (typeof text === 'string' ? csvParse(text) : text).forEach(r => {
     const code = String(r.state || '').toLowerCase();
     if (!code) return;
     out[code] = {
@@ -107,7 +107,7 @@ function buildStateSummaries(text) {
 function buildCoverageByFips(text) {
   const out = {};
   if (!text) return out;
-  csvParse(text).forEach(r => {
+  (typeof text === 'string' ? csvParse(text) : text).forEach(r => {
     const fips = normalizeFips(r.state_fips);
     if (!fips || r.coverage == null || r.coverage === '') return;
     out[fips] = { coverage: Number(r.coverage), status: 'ready' };
@@ -210,11 +210,19 @@ export function useUnifiedMapData() {
 
     async function load() {
       try {
-        const [usRes, worldRes, manifestRes, statesCsvRes] = await Promise.all([
+        const [usRes, worldRes, manifestRes, stateApiResults] = await Promise.all([
           fetch(US_ATLAS_URL),
           fetch(WORLD_ATLAS_URL),
           fetch(withBase('data/states.json')),
-          fetch(withBase('data/states.csv')),
+          Promise.all(Object.entries(stateRegistry).map(async ([code, apiBase]) => {
+            try {
+              const response = await fetch(`${apiBase}data/state.csv`);
+              if (!response.ok) return [];
+              return csvParse(await response.text()).map(row => ({ ...row, state: row.state || code }));
+            } catch {
+              return [];
+            }
+          })),
         ]);
 
         if (!usRes.ok) throw new Error('Failed to load US map data');
@@ -224,12 +232,12 @@ export function useUnifiedMapData() {
         // than fail the whole app if any are missing.
         const world = worldRes.ok ? await worldRes.json() : null;
         const manifest = manifestRes.ok ? await manifestRes.json() : {};
-        const statesCsvText = statesCsvRes.ok ? await statesCsvRes.text() : '';
-        const stateSummaryByCode = buildStateSummaries(statesCsvText);
+        const stateRows = stateApiResults.flat();
+        const stateSummaryByCode = buildStateSummaries(stateRows);
 
         const stateFeatures = topojson.feature(us, us.objects.states).features;
-        // National choropleth shading comes straight from states.csv now (#68).
-        const coverageByFips = buildCoverageByFips(statesCsvText);
+        // National choropleth shading comes from each registered state API.
+        const coverageByFips = buildCoverageByFips(stateRows);
 
         // world-atlas exposes `countries` (and `land`); we need countries so
         // we can filter the US out and leave Canada/Mexico/Caribbean as

@@ -116,7 +116,7 @@ function buildFetchMock(captured, { dashboardOk = true } = {}) {
     if (url.endsWith('data/states.json')) {
       return Promise.resolve({ ok: true, json: () => Promise.resolve(mockManifest()) });
     }
-    if (url.endsWith('data/states.csv')) {
+    if (url === 'https://cgbryan1.github.io/measles-NC/data/states.csv') {
       return Promise.resolve({ ok: true, text: () => Promise.resolve(mockStatesCsv()) });
     }
     // #20 per-state CSV bundle: county summary + combined schools file.
@@ -152,7 +152,7 @@ describe('useUnifiedMapData', () => {
     expect(result.current.error).toBeNull();
     expect(captured.some(u => u.includes('counties-10m.json'))).toBe(true);
     expect(captured.some(u => u.includes('countries-110m.json'))).toBe(true);
-    expect(captured.some(u => u.endsWith('data/states.csv'))).toBe(true);
+    expect(captured).toContain('https://cgbryan1.github.io/measles-NC/data/states.csv');
     expect(captured.some(u => u.endsWith('data/states.json'))).toBe(true);
     // national.json is gone (#68): national shading derives from states.csv.
     expect(captured.some(u => u.endsWith('data/national.json'))).toBe(false);
@@ -168,7 +168,7 @@ describe('useUnifiedMapData', () => {
     const { result } = renderHook(() => useUnifiedMapData());
     await waitFor(() => expect(result.current.loading).toBe(false));
 
-    expect(captured.some(u => u.endsWith('data/states.csv'))).toBe(true);
+    expect(captured).toContain('https://cgbryan1.github.io/measles-NC/data/states.csv');
     const nc = result.current.stateSummaryByCode.nc;
     expect(nc).toBeDefined();
     expect(nc.name).toBe('North Carolina');
