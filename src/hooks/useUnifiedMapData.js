@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import * as topojson from 'topojson-client';
 import { csvParse } from 'd3-dsv';
 import { covTier } from '../config/index.js';
-import { getStateConfig, normalizeFips, registryBaseUrl } from '../config/states.js';
+import { getStateConfig, normalizeFips } from '../config/states.js';
 
 // CDN URLs for shared topology data. us-atlas drives the US states + counties;
 // world-atlas provides surrounding countries (Canada, Mexico, Caribbean) to
@@ -19,15 +19,9 @@ function withBase(path) {
   return `${base}${path}`;
 }
 
-function dataPath(entry, fallback) {
-  if (typeof entry === 'string') return fallback;
-  const path = entry?.dataset_path;
-  return path ? `${path.replace(/\/?$/, '/')}` : fallback;
-}
-
-// Fetches state registry.json, which maps lowercase state codes to either a
-// legacy API base URL or an enriched repository entry. The registry is the
-// single source of truth for per-state data locations.
+// Fetches state registry.json, which maps lowercase state code → base URL for 
+// that state's measles-XX data API. The registry is a single source of truth 
+// for the per-state data locations, so the app doesn't hardcode any state URLs.
 const registryResponse = await fetch(withBase(`data/stateRegistry.json`));
 const stateRegistry = await registryResponse.json();
 
@@ -173,7 +167,7 @@ function buildStatePayloadFromCsv({ stateCode, countyRows, schoolRows, us }) {
  * Unified data orchestrator that backs the zoom-aware map. Replaces the
  * legacy `useNationalData` + `useDashboardData` pair.
  *
- * - Loads the shared us-atlas, world-atlas, national summary, and per-state
+ * - Loads the shared us-atlas, world-atlas, national stub, and per-state
  *   manifest exactly once at mount.
  * - Lazy-loads each state's #20 CSV bundle (states/<code>.csv +
  *   states/<code>/schools.csv) on demand via `focusState(code)`. Re-focusing a
@@ -222,14 +216,9 @@ export function useUnifiedMapData() {
           fetch(US_ATLAS_URL),
           fetch(WORLD_ATLAS_URL),
           fetch(withBase('data/states.json')),
-          Promise.all(Object.entries(stateRegistry).map(async ([code, entry]) => {
+          Promise.all(Object.entries(stateRegistry).map(async ([code, apiBase]) => {
             try {
-              const apiBase = registryBaseUrl(entry);
-              if (!apiBase) return [];
-              const prefix = dataPath(entry, 'data/');
-              const response = await fetch(typeof entry === 'string'
-                ? `${apiBase}data/state.csv`
-                : `${apiBase}${prefix}state.csv`);
+              const response = await fetch(`${apiBase}data/state.csv`);
               if (!response.ok) return [];
               return csvParse(await response.text()).map(row => ({ ...row, state: row.state || code }));
             } catch {
@@ -327,16 +316,9 @@ export function useUnifiedMapData() {
         // #20 CSV bundle: the county summary + the combined per-state schools
         // file. (Per-county files under counties/ are the canonical download/API
         // unit (#21/#22); the app reads schools.csv to avoid an N+1 fan-out.)
-        const apiBase = registryBaseUrl(stateRegistry[code]);
-        if (!apiBase) throw new Error(`State registry entry for ${code} has no base_url.`);
-        const prefix = dataPath(stateRegistry[code], 'data/');
         const [countyRes, schoolRes] = await Promise.all([
-          fetch(typeof stateRegistry[code] === 'string'
-            ? `${apiBase}data/counties.csv`
-            : `${apiBase}${prefix}counties.csv`),
-          fetch(typeof stateRegistry[code] === 'string'
-            ? `${apiBase}data/schools.csv`
-            : `${apiBase}${prefix}schools.csv`),
+          fetch(`${stateRegistry[code]}data/counties.csv`),
+          fetch(`${stateRegistry[code]}data/schools.csv`),
         ]);
         if (!countyRes.ok) throw new Error(`Failed to load ${code.toUpperCase()} data`);
         const countyRows = csvParse(await countyRes.text());
