@@ -26,3 +26,6 @@ public/data/schema.json
 # api.html is rendered from docs/API.md by scripts/gen-api-page.mjs /
 # npm prebuild; not committed (#93). Edit docs/API.md, not the generated page.
 public/api.html
+
+# Live endpoint health-check report (uploaded as a CI artifact).
+state-data-report.json

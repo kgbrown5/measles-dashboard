@@ -90,12 +90,18 @@ shared base data plus a `stateData` map the map/sidebar render from. Supporting
 hooks: `useStateManifest` (the ready/coming-soon manifest), `useGeolocation` /
 `useStateGeolocation` (locate the visitor).
 
-> **In flux:** the per-state data source is being migrated from authored
-> `dashboard.json` files to a static CSV bundle generated from the imuGAP model
-> output. See [#20](https://github.com/ACCIDDA/measles-dashboard/issues/20) for
-> the CSV schema, the producer scripts, and the loader rewrite. This document
-> will absorb the producer/CSV details once that lands; until then #20 is the
-> source of truth for the data pipeline.
+State APIs are selected through `public/data/stateRegistry.json`. Legacy string
+entries point to a deployment base URL; registration creates object entries
+with repository identity, dataset path, source commit, and CSV SHA-256 hashes.
+The browser and live-data monitor share URL resolution in `src/data/registry.js`.
+The app fetches `meta.json`, state summaries, and county/school CSVs from the
+registered deployments.
+
+Registration validates source Git blobs before opening a registry PR. The
+separate **Check State Data** workflow checks the deployed endpoints, schema,
+county geography joins, CORS, metadata, and registered hashes. Scheduled failures
+open deduplicated issues in state repositories with reverification instructions.
+See [Data validation](DATA_VALIDATION.md) for setup and limits.
 
 ## Styling
 

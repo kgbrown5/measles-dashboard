@@ -104,7 +104,7 @@ function mockStatesCsv() {
     'nc,37,North Carolina,1825,0.3951,' + COV_VALS + '\n';
 }
 
-function buildFetchMock(captured, { dashboardOk = true } = {}) {
+function buildFetchMock(captured, { dashboardOk = true, schoolsOk = true } = {}) {
   return vi.fn((url) => {
     captured.push(url);
     if (url.includes('counties-10m.json')) {
@@ -125,6 +125,7 @@ function buildFetchMock(captured, { dashboardOk = true } = {}) {
       return Promise.resolve({ ok: true, text: () => Promise.resolve(mockCountyCsv()) });
     }
     if (url.endsWith('data/schools.csv')) {
+      if (!schoolsOk) return Promise.resolve({ ok: false });
       return Promise.resolve({ ok: true, text: () => Promise.resolve(mockSchoolCsv()) });
     }
     return Promise.resolve({ ok: false, text: () => Promise.resolve('') });
@@ -321,5 +322,19 @@ describe('useUnifiedMapData', () => {
     });
     const fetches = captured.filter(u => u.endsWith('data/counties.csv')).length;
     expect(fetches).toBe(1);
+  });
+
+  it('surfaces missing schools without caching an empty successful payload', async () => {
+    globalThis.fetch = buildFetchMock(captured, { schoolsOk: false });
+    const { result } = renderHook(() => useUnifiedMapData());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    await act(async () => { await result.current.focusState('nc'); });
+    expect(result.current.stateError.nc).toMatch(/school data/);
+    expect(result.current.stateData.nc).toBeUndefined();
+
+    globalThis.fetch = buildFetchMock(captured);
+    await act(async () => { await result.current.focusState('nc'); });
+    expect(result.current.stateData.nc.allSchools.length).toBeGreaterThan(0);
+    expect(result.current.stateError.nc).toBeUndefined();
   });
 });

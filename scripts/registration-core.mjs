@@ -1,4 +1,4 @@
-import { csvParse } from 'd3-dsv';
+import { csvParse, csvParseRows } from 'd3-dsv';
 import { FILES, columnNames } from '../src/data/schema.js';
 import { validateRows } from '../src/data/validate.js';
 
@@ -14,7 +14,7 @@ const STATE_FIPS = {
 };
 
 export function isStateCode(value) {
-  return Boolean(STATE_FIPS[value]);
+  return Object.hasOwn(STATE_FIPS, value);
 }
 
 const DATASET_FILES = [
@@ -66,15 +66,43 @@ export function discoverDataset(treePaths, stateCode) {
 }
 
 function validateFile(path, shape, contents) {
+  // d3-dsv intentionally tolerates malformed quotes and extra/missing cells.
+  // Reject those at ingestion rather than silently dropping or shifting values.
+  let quoted = false;
+  let fieldStart = true;
+  let closed = false;
+  for (let i = 0; i < contents.length; i++) {
+    const char = contents[i];
+    if (quoted) {
+      if (char === '"') {
+        if (contents[i + 1] === '"') i++;
+        else { quoted = false; closed = true; }
+      }
+    } else if (char === ',' || char === '\r' || char === '\n') {
+      fieldStart = true;
+      closed = false;
+    } else if (closed || (char === '"' && !fieldStart)) {
+      return [`${path}: malformed CSV quoting.`];
+    } else {
+      quoted = char === '"';
+      fieldStart = false;
+    }
+  }
+  if (quoted) return [`${path}: unterminated CSV quoted field.`];
   const rows = csvParse(contents);
   const expected = columnNames(shape);
   if (!rows.columns || rows.columns.join(',') !== expected.join(',')) {
     return [`${path}: header must exactly match the ACCIDA schema (${expected.join(',')}).`];
   }
-  return validateRows(shape, rows).map((error) => `${path}: ${error}`);
+  const errors = validateRows(shape, rows).map((error) => `${path}: ${error}`);
+  csvParseRows(contents).slice(1).forEach((row, index) => {
+    if (row.length !== expected.length) errors.push(`${path}: row ${index + 1} has ${row.length} cells; expected ${expected.length}.`);
+  });
+  return errors;
 }
 
 export function validateDataset({ stateCode, files, contents }) {
+  if (!isStateCode(stateCode)) throw new Error(`Unknown state code: ${stateCode}`);
   const [statePath, countyPath, schoolsPath] = files;
   const shapes = [
     'data/states.csv',
@@ -88,12 +116,32 @@ export function validateDataset({ stateCode, files, contents }) {
   if (stateRow && stateRow.state !== stateCode) {
     errors.push(`${statePath}: state must be ${stateCode}.`);
   }
-  if (stateRow && stateRow.state_fips !== STATE_FIPS[stateCode]) {
+  if (stateRow && stateRow.state_fips?.padStart(2, '0') !== STATE_FIPS[stateCode]) {
     errors.push(`${statePath}: state_fips must be ${STATE_FIPS[stateCode]}.`);
   }
   if (stateRow && !stateRow.state_name?.trim()) errors.push(`${statePath}: state_name is required.`);
   if (!countyRows.length) errors.push(`${countyPath}: must contain at least one county row.`);
   if (!schoolRows.length) errors.push(`${schoolsPath}: must contain at least one school row.`);
+  for (const [path, rows, keys] of [
+    [countyPath, countyRows, ['county']],
+    [schoolsPath, schoolRows, ['school_id', 'school_name', 'county']],
+  ]) {
+    const identities = new Set();
+    for (const row of rows) {
+      for (const key of keys) {
+        if (!row[key]?.trim()) errors.push(`${path}: ${key} is required.`);
+      }
+      if (identities.has(row[keys[0]])) errors.push(`${path}: duplicate ${keys[0]} "${row[keys[0]]}".`);
+      identities.add(row[keys[0]]);
+    }
+  }
+  const countyFips = new Set();
+  for (const row of countyRows) {
+    if (!row.county_fips) continue; // Blank county FIPS is supported by the schema.
+    if (!row.county_fips.startsWith(STATE_FIPS[stateCode])) errors.push(`${countyPath}: county_fips ${row.county_fips} belongs to another state.`);
+    if (countyFips.has(row.county_fips)) errors.push(`${countyPath}: duplicate county_fips ${row.county_fips}.`);
+    countyFips.add(row.county_fips);
+  }
   const countyNames = new Set(countyRows.map((row) => row.county));
   for (const row of schoolRows) {
     if (!countyNames.has(row.county)) {
@@ -101,10 +149,12 @@ export function validateDataset({ stateCode, files, contents }) {
       break;
     }
   }
-  const hasCoverage = [stateRows, countyRows, schoolRows]
-    .flat()
-    .some((row) => Object.keys(row).some((key) => key.startsWith('coverage') && row[key] !== ''));
-  if (!hasCoverage) errors.push('dataset must contain at least one coverage measurement.');
+  // Overall coverage drives map shading; CI/grade values alone cannot replace it.
+  for (const [index, rows] of [stateRows, countyRows, schoolRows].entries()) {
+    if (!rows.some((row) => row.coverage?.trim() && row.no_data !== '1')) {
+      errors.push(`${files[index]}: must contain at least one usable overall coverage measurement.`);
+    }
+  }
   if (errors.length) throw new Error(errors.join('\n'));
   return {
     stateName: stateRow.state_name,
@@ -113,11 +163,18 @@ export function validateDataset({ stateCode, files, contents }) {
   };
 }
 
-export function checkRegistryConflicts(registry, stateCode, repositoryId, repositoryUrl) {
+export function checkRegistryConflicts(registry, stateCode, repositoryId, repositoryUrl, { reverify = false } = {}) {
   for (const [code, value] of Object.entries(registry)) {
     const entry = typeof value === 'string' ? { base_url: value } : value || {};
     if (code === stateCode) {
+      if (reverify && !entry.repository_id) {
+        const source = parseRepositoryUrl(repositoryUrl);
+        const expectedBase = `https://${source.owner}.github.io/${source.repo}`;
+        if (entry.repository_url === source.canonicalUrl
+          || entry.base_url?.replace(/\/$/, '').toLowerCase() === expectedBase.toLowerCase()) continue;
+      }
       if (String(entry.repository_id) === String(repositoryId)) {
+        if (reverify) continue;
         throw new Error(`${stateCode.toUpperCase()} is already registered for this repository.`);
       }
       throw new Error(`${stateCode.toUpperCase()} is already registered for ${entry.repository_url || 'another repository'}.`);
@@ -128,7 +185,7 @@ export function checkRegistryConflicts(registry, stateCode, repositoryId, reposi
   }
 }
 
-export function buildRegistryEntry({ stateCode, repositoryUrl, repositoryId, datasetPath, sourceCommitSha, stateName, reportingPeriod, baseUrl }) {
+export function buildRegistryEntry({ stateCode, repositoryUrl, repositoryId, datasetPath, sourceCommitSha, stateName, reportingPeriod, baseUrl, dataHashes }) {
   return {
     base_url: baseUrl,
     repository_url: repositoryUrl,
@@ -136,6 +193,7 @@ export function buildRegistryEntry({ stateCode, repositoryUrl, repositoryId, dat
     dataset_path: datasetPath,
     source_commit_sha: sourceCommitSha,
     dataset_version: sourceCommitSha,
+    ...(dataHashes ? { data_sha256: dataHashes } : {}),
     reporting_period: reportingPeriod,
     fips: STATE_FIPS[stateCode],
     state_name: stateName,

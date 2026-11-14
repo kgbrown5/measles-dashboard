@@ -49,6 +49,8 @@ How it all fits together is documented in
 State repositories are registered centrally through GitHub Actions. See
 [`docs/REGISTRATION.md`](docs/REGISTRATION.md) for the submission format,
 public repository requirement, and administrator review process.
+[Data validation](docs/DATA_VALIDATION.md) describes recurring API checks,
+registered SHA-256 fingerprints, and automated issues for failing states.
 
 ## Quick start
 

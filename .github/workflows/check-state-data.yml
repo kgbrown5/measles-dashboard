@@ -1,0 +1,75 @@
+name: Check State Data
+
+on:
+  schedule:
+    - cron: '23 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main, dev]
+    paths:
+      - 'public/data/stateRegistry.json'
+      - 'src/data/**'
+      - 'src/config/**'
+      - 'src/hooks/useUnifiedMapData.js'
+      - 'scripts/*state-data*'
+      - 'scripts/*registration*'
+      - 'scripts/register-state-repository.mjs'
+      - 'scripts/data-hashes.mjs'
+      - '.github/workflows/check-state-data.yml'
+  pull_request:
+    paths:
+      - 'public/data/stateRegistry.json'
+      - 'src/data/**'
+      - 'src/config/**'
+      - 'src/hooks/useUnifiedMapData.js'
+      - 'scripts/*state-data*'
+      - 'scripts/*registration*'
+      - 'scripts/register-state-repository.mjs'
+      - 'scripts/data-hashes.mjs'
+      - '.github/workflows/check-state-data.yml'
+
+permissions:
+  contents: read
+
+# Serialize reporting so simultaneous scheduled/manual runs cannot duplicate issues.
+concurrency:
+  group: state-data-${{ github.event_name == 'pull_request' && github.ref || 'monitor' }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Validate published endpoints and registered hashes
+        id: validate
+        run: npm run check-state-data
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DASHBOARD_ORIGIN: ${{ vars.DASHBOARD_ORIGIN }}
+      - name: Notify failing state repositories
+        # Only trusted default-branch code receives the cross-repository token.
+        # PRs (including forks) run read-only validation and never open issues.
+        if: >-
+          ${{ !cancelled() && steps.validate.outcome == 'failure' &&
+              hashFiles('state-data-report.json') != '' &&
+              (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') &&
+              github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+        run: npm run check-state-data -- --report-issues
+        env:
+          STATE_DATA_ISSUES_TOKEN: ${{ secrets.STATE_DATA_ISSUES_TOKEN }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: state-data-report
+          path: state-data-report.json
+          retention-days: 14
+          if-no-files-found: warn

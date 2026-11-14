@@ -23,6 +23,7 @@ npm install
 | `npm run dev`            | Vite dev server at http://localhost:5173 with HMR.                                              |
 | `npm run build`          | Production build into `dist/`. Required before running e2e tests outside of `npm run test:e2e`. |
 | `npm run preview`        | Serves the built `dist/` on port 4173 — the URL Playwright's `webServer` expects.               |
+| `npm run check-state-data` | Read-only live state API validation; writes a JSON report and fails on invalid data. |
 | `npm run lint`           | ESLint over `src/`.                                                                             |
 | `npm test`               | Vitest unit/component tests in jsdom, single run.                                               |
 | `npm run test:watch`     | Vitest in watch mode.                                                                           |
@@ -117,6 +118,10 @@ The pre-commit hook runs ESLint with `--max-warnings=0`, so **warnings block com
 | Unit Tests | `npm test`                                    | Vitest, single run.                                          |
 | Build      | `npm run build`                               | Uploads `dist/` as an artifact for the E2E job.              |
 | E2E Tests  | `npx playwright test --ignore-snapshots`      | Downloads the `dist/` artifact. Visual regressions are intentionally not checked here — verify them locally on macOS. |
+
+The separate **Check State Data** workflow validates published state APIs on
+relevant PRs/pushes and every six hours. See [Data validation](docs/DATA_VALIDATION.md)
+for hash baselines, issue reporting, and central credential setup.
 
 On failure, the E2E job uploads `playwright-report/` and `test-results/` as artifacts (7-day retention) — grab them from the Actions run if you need to debug.
 

@@ -12,9 +12,9 @@ const columns = 'state,state_fips,state_name,n_schools,pct_schools_below_95,cove
 const countyColumns = 'county,county_fips,n_schools,pct_schools_below_95,coverage,coverage_ci_low,coverage_ci_high,coverage_K,coverage_1,coverage_2,coverage_3,coverage_4,coverage_5,coverage_ci_low_K,coverage_ci_low_1,coverage_ci_low_2,coverage_ci_low_3,coverage_ci_low_4,coverage_ci_low_5,coverage_ci_high_K,coverage_ci_high_1,coverage_ci_high_2,coverage_ci_high_3,coverage_ci_high_4,coverage_ci_high_5,prob_below_95,tier';
 const schoolColumns = 'school_id,school_name,county,enrollment,lon,lat,no_data,coverage,coverage_ci_low,coverage_ci_high,coverage_K,coverage_1,coverage_2,coverage_3,coverage_4,coverage_5,coverage_ci_low_K,coverage_ci_low_1,coverage_ci_low_2,coverage_ci_low_3,coverage_ci_low_4,coverage_ci_low_5,coverage_ci_high_K,coverage_ci_high_1,coverage_ci_high_2,coverage_ci_high_3,coverage_ci_high_4,coverage_ci_high_5,prob_below_95,tier';
 const valid = [
-  `${columns}\nnc,37,North Carolina,1,0,0.95,,,,,,,,,,,,,,,,,,,,,,,H\n`,
-  `${countyColumns}\nWake,,1,0,0.95,,,,,,,,,,,,,,,,,,,,,,,H\n`,
-  `${schoolColumns}\n1,School,Wake,10,,,0,0.95,,,,,,,,,,,,,,,,,,,,,,,H\n`,
+  `${columns}\nnc,37,North Carolina,1,0,0.95,,,,,,,,,,,,,,,,,,,,,,H\n`,
+  `${countyColumns}\nWake,,1,0,0.95,,,,,,,,,,,,,,,,,,,,,,H\n`,
+  `${schoolColumns}\n1,School,Wake,10,,,0,0.95,,,,,,,,,,,,,,,,,,,,,,H\n`,
 ];
 
 describe('registration core', () => {

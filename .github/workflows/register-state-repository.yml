@@ -86,6 +86,7 @@ jobs:
             '- Repository metadata and immutable repository ID were retrieved.',
             '- All required ACCIDA CSV files and headers were found.',
             '- Schema, value, state identity, county linkage, and coverage checks passed.',
+            '- SHA-256 fingerprints recorded for all three CSVs; live endpoint CI must match these reviewed contents.',
             '',
             '> An administrator must review and merge this PR. It is not automatically merged.',
           ].join('\n');

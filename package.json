@@ -22,7 +22,8 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
-    "prepare": "husky"
+    "prepare": "husky",
+    "check-state-data": "node scripts/check-state-data.mjs"
   },
   "lint-staged": {
     "src/**/*.{js,jsx}": [

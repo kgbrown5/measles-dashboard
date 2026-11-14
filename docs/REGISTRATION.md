@@ -42,7 +42,7 @@ the workflow.
 The workflow creates a branch and a pull request that changes
 `public/data/stateRegistry.json` and marks the state ready in
 `public/data/states.json`. Review the repository URL, repository ID, dataset
-path, source commit SHA, row counts, and automated validation results.
+path, source commit SHA, SHA-256 fingerprints, row counts, and automated validation results.
 Existing CI checks must pass. Merge the PR only after confirming that the
 repository's public data endpoint (`base_url`) is correct. The workflow never
 merges its own PR.
@@ -54,6 +54,18 @@ base URL.
 
 ## Future data updates
 
-The immutable repository ID makes a later update workflow safe to add: it can
-read the same registered repository, validate a newer commit against the same
-schema, and open an update PR. A new state registration is not required.
+The **Check State Data** workflow checks published endpoints every six hours,
+including schema, map compatibility, browser access, and SHA-256 fingerprints
+against the registered CSV contents. A failure opens one issue in the affected
+state repository when the central reporting credential is configured.
+
+After an intentional data update, rerun **Register State Repository** with the
+same state code and repository URL. It validates the latest default-branch
+bundle and opens a PR with refreshed fingerprints. An administrator must review
+and merge that PR. A different repository ID cannot replace an existing state
+through this workflow. Legacy Pages entries can also be re-registered to add
+fingerprints and repository identity.
+
+The public API must serve the registered CSV contents and a valid `meta.json`
+from the registered dataset path. See [Data validation](DATA_VALIDATION.md) for
+the full checks, central credential setup, legacy migration, and issue recovery.

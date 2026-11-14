@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as topojson from 'topojson-client';
 import { csvParse } from 'd3-dsv';
+import { dataUrl } from '../data/registry.js';
 import { covTier } from '../config/index.js';
 import { getStateConfig, normalizeFips } from '../config/states.js';
 
@@ -218,7 +219,7 @@ export function useUnifiedMapData() {
           fetch(withBase('data/states.json')),
           Promise.all(Object.entries(stateRegistry).map(async ([code, apiBase]) => {
             try {
-              const response = await fetch(`${apiBase}data/state.csv`);
+              const response = await fetch(dataUrl(apiBase, 'state.csv'));
               if (!response.ok) return [];
               return csvParse(await response.text()).map(row => ({ ...row, state: row.state || code }));
             } catch {
@@ -317,10 +318,11 @@ export function useUnifiedMapData() {
         // file. (Per-county files under counties/ are the canonical download/API
         // unit (#21/#22); the app reads schools.csv to avoid an N+1 fan-out.)
         const [countyRes, schoolRes] = await Promise.all([
-          fetch(`${stateRegistry[code]}data/counties.csv`),
-          fetch(`${stateRegistry[code]}data/schools.csv`),
+          fetch(dataUrl(stateRegistry[code], 'counties.csv')),
+          fetch(dataUrl(stateRegistry[code], 'schools.csv')),
         ]);
         if (!countyRes.ok) throw new Error(`Failed to load ${code.toUpperCase()} data`);
+        if (!schoolRes.ok) throw new Error(`Failed to load ${code.toUpperCase()} school data`);
         const countyRows = csvParse(await countyRes.text());
         const schoolRows = schoolRes.ok ? csvParse(await schoolRes.text()) : [];
         const payload = buildStatePayloadFromCsv({ stateCode: code, countyRows, schoolRows, us });

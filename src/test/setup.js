@@ -18,7 +18,7 @@ const stateConfigs = {
 globalThis.fetch = async (input) => {
   const url = String(input);
   if (url.endsWith('data/stateRegistry.json')) {
-    return { ok: true, json: async () => ({ nc: 'https://nc.test/' }) };
+    return { ok: true, json: async () => ({ nc: { base_url: 'https://nc.test/', dataset_path: 'data/' } }) };
   }
   if (url.endsWith('data/meta.json')) {
     return { ok: true, json: async () => stateConfigs.nc };

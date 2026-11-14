@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
+import { datasetHashes } from './data-hashes.mjs';
 import {
   buildRegistryEntry,
   checkRegistryConflicts,
@@ -73,8 +74,10 @@ async function main() {
   const registry = JSON.parse(readFileSync(centralRegistryPath, 'utf8'));
   const manifestPath = 'public/data/states.json';
   const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
-  checkRegistryConflicts(registry, stateCode, repository.id, source.canonicalUrl);
-  const homepage = `https://${source.owner}.github.io/${source.repo}/`;
+  checkRegistryConflicts(registry, stateCode, repository.id, source.canonicalUrl, { reverify: true });
+  const existing = registry[stateCode];
+  const homepage = (typeof existing === 'string' ? existing : existing?.base_url)
+    || `https://${source.owner}.github.io/${source.repo}/`;
   registry[stateCode] = buildRegistryEntry({
     stateCode,
     repositoryUrl: source.canonicalUrl,
@@ -84,6 +87,7 @@ async function main() {
     stateName: result.stateName,
     reportingPeriod: result.reportingPeriod,
     baseUrl: homepage,
+    dataHashes: datasetHashes(blobs),
   });
   manifest[stateCode] = {
     ...(manifest[stateCode] || {}),
