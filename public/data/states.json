@@ -22,7 +22,7 @@
   "ca": {
     "fips": "06",
     "name": "California",
-    "status": "coming_soon"
+    "status": "ready"
   },
   "co": {
     "fips": "08",
