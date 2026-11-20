@@ -18,6 +18,11 @@
     "dataset_path": "data/",
     "source_commit_sha": "f078befd38d8957c8f8c4657ff903027824dfd5b",
     "dataset_version": "f078befd38d8957c8f8c4657ff903027824dfd5b",
+    "data_sha256": {
+      "state.csv": "29ec677301a1c405ae7828b84c407e8a2ff8c8ef114403806b17a79173085566",
+      "counties.csv": "59d84bd8105c840b4541111e83cd2287a625f9bac53f9818d25e40d72846f43e",
+      "schools.csv": "5c39cd640f47c60646cb34abc119df30d429afcdcd53eb82ec91f3f78fb428b0"
+    },
     "reporting_period": null,
     "fips": "06",
     "state_name": "California",
